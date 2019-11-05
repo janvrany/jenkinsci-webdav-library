@@ -1,18 +1,18 @@
 # Jenkins WebDAV Library
 
-This [Jenkins shared library][1] contains a [WebDAV][3] client to access and
+This [Jenkins shared library][1] contains a [WebDAV][2] client to access and
 upload files to a WebDAV-enabled site. This can be used - for example - to
 upload build artifacts.
 
 ## Configuration
 
-See [Jenkins User Handbook, chapter Extending with Shared Libraries][2] on how to configure pipeline libraries.
+See [Jenkins User Handbook, chapter Extending with Shared Libraries][1] on how to configure pipeline libraries.
 
 ## Usage
 
 In a pipeline script:
 
-    library('webdav-library-dev')
+    library('webdav-library')
     node ("...") {
       ws {
 
