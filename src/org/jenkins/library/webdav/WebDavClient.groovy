@@ -1,6 +1,9 @@
 package org.jenkins.library.webdav;
 
+import java.io.File;
 import hudson.FilePath;
+import hudson.remoting.VirtualChannel;
+import org.jenkinsci.remoting.RoleChecker;
 
 @Grab(group='com.github.lookfirst', module='sardine', version='5.9')
 import com.github.sardine.*;
@@ -21,6 +24,9 @@ class WebDavClient {
      */
     protected String remote;
 
+    protected String user;
+    protected String pass;
+
     protected Sardine conn;
 
     def steps;
@@ -28,6 +34,8 @@ class WebDavClient {
     WebDavClient(steps, local, remote, user, pass) {
         this.local = local;
         this.remote = remote;
+        this.user = user;
+        this.pass = pass;
         this.conn = SardineFactory.begin()
         this.conn.setCredentials(user, pass)
         this.steps = steps
@@ -65,10 +73,19 @@ class WebDavClient {
 
     def put(path, pattern) {
         for (file in this.local.list(pattern)) {
-            this.steps.echo "Uploading ${file.getName()}"
-            conn.put(path2url(path + DavResource.SEPARATOR + file.getName()), file.read())
+            def dest = path2url(path + DavResource.SEPARATOR + file.getName());
+            def temp = File.createTempFile("put", null);
+            try {
+                file.copyTo(new FilePath(temp));
+                this.steps.echo "Uploading ${file.getName()}..."
+                conn.put(dest, temp, (String)null);
+                this.steps.echo "Uploaded ${file.getName()}"
+            } finally {
+                temp.delete()
+            }
         }
     }
+
 
     def ls(path = null) {
         def resources = conn.list(path2url(path))
