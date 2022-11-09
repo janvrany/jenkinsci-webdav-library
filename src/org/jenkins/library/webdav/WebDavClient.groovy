@@ -5,7 +5,7 @@ import hudson.FilePath;
 import hudson.remoting.VirtualChannel;
 import org.jenkinsci.remoting.RoleChecker;
 
-@Grab(group='com.github.lookfirst', module='sardine', version='5.9')
+@Grab(group='com.github.lookfirst', module='sardine', version='5.10')
 import com.github.sardine.*;
 import com.github.sardine.impl.SardineException;
 import org.apache.http.client.*;
@@ -43,19 +43,26 @@ class WebDavClient {
 
     def mkdir(path) {
         try {
-            conn.createDirectory(path2url(path))
+            conn.createDirectory(path2url(path, true))
         } catch (HttpResponseException hte) {
             /*
              * Apache's mod_dav (at least) respond with '301 Moved permamently'
-             * when the directory already exist. Do notning then.
+             * when the directory already exist. Do nothing then.
+             *
+             * NGINX's ngx_http_dav_module responds with `405 Not Allowed`.
              */
-            if (hte.getStatusCode() != 301) throw hte;
+            def status = hte.getStatusCode()
+            if (status != 301 && status != 405) throw hte;
         }
     }
 
     def rm(path) {
         try {
-            conn.delete(path2url(path))
+            if (isdir(path)) {
+                conn.delete(path2url(path + DavResource.SEPARATOR))
+            } else {
+                conn.delete(path2url(path))
+            }
         } catch (HttpResponseException hte) {
             /*
              * Apache's mod_dav (at least) requires directories to be
@@ -102,11 +109,16 @@ class WebDavClient {
         }
     }
 
-    private def path2url(path) {
+    private def path2url(path, isdir = false) {
+        def url = null
         if (path == null || path.equals('')) {
-            return remote
+            url = remote
         } else {
-            return remote + DavResource.SEPARATOR + path
+            url = remote + DavResource.SEPARATOR + path
         }
+        if (isdir && url.charAt(url.length()-1) != DavResource.SEPARATOR.charAt(0)) {
+            url = url + DavResource.SEPARATOR
+        }
+        return url
     }
 }
