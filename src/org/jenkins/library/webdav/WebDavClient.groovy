@@ -42,17 +42,25 @@ class WebDavClient {
     }
 
     def mkdir(path) {
-        try {
-            conn.createDirectory(path2url(path, true))
-        } catch (HttpResponseException hte) {
-            /*
-             * Apache's mod_dav (at least) respond with '301 Moved permamently'
-             * when the directory already exist. Do nothing then.
-             *
-             * NGINX's ngx_http_dav_module responds with `405 Not Allowed`.
-             */
-            def status = hte.getStatusCode()
-            if (status != 301 && status != 405) throw hte;
+        /*
+         * WebDAV's MKCOL request cannot make directories recursively,
+         * so we have to do it manually in a loop.
+         */
+        def current = null
+        for (each in path.tokenize("/")) {
+            current = current == null ? each : current + "/" + each
+            try {
+                conn.createDirectory(path2url(current, true))
+            } catch (HttpResponseException hte) {
+                /*
+                 * Apache's mod_dav (at least) respond with '301 Moved permamently'
+                 * when the directory already exist. Do nothing then.
+                 *
+                 * NGINX's ngx_http_dav_module responds with `405 Not Allowed`.
+                 */
+                def status = hte.getStatusCode()
+                if (status != 301 && status != 405) throw hte;
+            }
         }
     }
 
